@@ -1,4 +1,4 @@
-# CremFuelled-s-PDF-Merger
+# CremFuelled's PDF Merger
 
 Quick python project which merges PDFs using the PyPDF2 module.
 
