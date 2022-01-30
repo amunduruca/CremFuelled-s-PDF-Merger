@@ -1,12 +1,26 @@
+import sys
+
 from PyPDF2 import PdfFileReader
 from PyPDF2 import PdfFileWriter
 
 def read_pdf(path : str) -> PdfFileReader:
-    pdf_file : file = open(path, "rb")
+    pdf_file = open(path, "rb")
     return PdfFileReader(pdf_file)
 
 def extract_metadata(path : str):
     return read_pdf(path).getDocumentInfo()
+
+def change_metadata(path: str, new_metadata: dict[str: str]):
+    reader = read_pdf(path)
+
+    out_file = open(path, "wb")
+    writer = PdfFileWriter()
+
+    writer.cloneDocumentFromReader(reader)
+    writer.addMetadata(new_metadata)
+    writer.write(out_file)
+    out_file.close()
+
 
 def process_page_range(page_range : str) -> list:
     start_to_end_nums = page_range.replace(" ", "").split("-")
@@ -89,7 +103,7 @@ while True:
     elif userInput == "exit":
         sys.exit(1)
 
-# TODO Finish metadata section.
+# TODO Debug metadata section.
 
     elif userInput == "metadata":
         while True:
@@ -99,23 +113,31 @@ while True:
             if pdf_location.lower() == "exit":
                 break
             else:
-                new_metadata = {}
-                old_metadata = DocumentInformation()
-
                 try:
-                    old_pdf = read_pdf(pdf_location)
-                    old_metadata = old_pdf.getDocumentInfo()
-                    new_pdf = PdfFileWriter().cloneDocumentFromReader(read_pdf(pdf_location))
+                    open(pdf_location, "r").close()
                 except:
-                    print("Something went wrong opening the file, please reenter the path.")
+                    print("File path doesn't seem to be valid.")
                     continue
-            
-                print("Opening file was successful.", end=' ')
-                
 
+                metadata_dict = {}
                 while True:
-                    print("What metadata attribute would you like to modify?")
-                    attribute = input().lower()
+                    print("Which attribute do you want to change or modify?")
+                    userI = input()
+                    if (userI.lower() == "exit"):
+                        break
 
-                    print(f"What would you like the value of {attribute} to become?")
+                    attr = "/" + userI
+
+                    print("What value should it be given?")
                     value = input()
+
+                    metadata_dict[attr] = value
+
+                #try:
+                change_metadata(pdf_location, metadata_dict)
+                print("Metadata Change Successfull!")
+                break
+                #except:
+                #    print("Error Changing Metadata.")
+                #    continue
+                
