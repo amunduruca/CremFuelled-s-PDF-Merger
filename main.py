@@ -1,18 +1,35 @@
 from PyPDF2 import PdfFileReader
 from PyPDF2 import PdfFileWriter
+from tkinter import *
+from tkinter import ttk
+
+TEXT_BOX_WIDTH = 40
+W_HEIGHT = 450
+W_WIDTH = 600
+START_FILES = 5
+
+# TODO: Make sure that we have popups for errors and such (replace print statements)
+# def popup(message):
 
 def read_pdf(path : str) -> PdfFileReader:
-    pdf_file : file = open(path, "rb")
+    try:
+        pdf_file = open(path, "rb")
+    except:
+        print(f"{path} is not an existing PDF")
+        return None
     return PdfFileReader(pdf_file)
 
 def extract_metadata(path : str):
-    return read_pdf(path).getDocumentInfo()
+    pdf_file = read_pdf(path)
+    if pdf_file != None:
+        return pdf_file.getDocumentInfo()
 
 def process_page_range(page_range : str) -> list:
     start_to_end_nums = page_range.replace(" ", "").split("-")
     return [int(start_to_end_nums[0]), int(start_to_end_nums[1])]
 
 # pages[n] must take the form "start-end"
+# TODO: None proofing required
 def merge_pdfs(pdf_paths : list[str], pages : list[str], pdf_name : str, author_name : str = "André A. Munduruca"):
     page_num_list = []
     pdf_list = []
@@ -24,98 +41,106 @@ def merge_pdfs(pdf_paths : list[str], pages : list[str], pdf_name : str, author_
         page_num_list.append(process_page_range(numbers))
     
     pdf_pages = []
-    output_file : file = open(pdf_name, "wb")
     new_pdf = PdfFileWriter()
 
+    try:
+        output_file = open(pdf_name, "wb")
+    except:
+        print("New File Location is invalid.")
+        return
+    
     for i in range(len(pdf_list)):
         start_num = page_num_list[i][0] - 1
         end_num = page_num_list[i][1]
         for j in range(start_num, end_num):
             new_pdf.addPage(pdf_list[i].getPage(j))
     
-    new_pdf.addMetadata({"author": author_name, "title": pdf_name, "producer": "PyPDF2", "creator": "CremFuelled's PDF Editor"})
+    new_pdf.addMetadata({"author": author_name, "title": pdf_name.removesuffix(".pdf"), "producer": "PyPDF2", "creator": "CremFuelled's PDF Editor"})
     new_pdf.write(output_file)
     output_file.close()
+    
+class PDF_info(ttk.Frame):
+    def __init__(self, super_frame):
+        ttk.Frame.__init__(self, super_frame)
 
-while True:
-    print("What do you want to do with the pdf?")
-    userInput = input().lower()
+        self.pages = StringVar()
+        self.filepath = StringVar()
 
-    if userInput == "merge":
-        pdfs = []
-        pages = []
+        self.file_label = ttk.Label(self, text="File:")
+        self.file_label.grid(row=0, column=1, sticky=(W, ))
 
-        while True:
-            print("Enter the path of one of the PDFs you want to merge, make sure to add them in order. When you are finished entering them, type exit.")
-            pdf_location = input()
-            
-            if pdf_location.lower() == "exit":
-                break
-            else:
-                try:
-                    open(pdf_location, "r").close()
-                except:
-                    print("PDF location seems to be invalid, try again.")
-                    continue
+        self.file_entry = ttk.Entry(self, width=TEXT_BOX_WIDTH, textvariable=self.filepath)
+        self.file_entry.grid(row=0, column=2, sticky=(W, E))
 
-            print("Enter the pages you want from the document in the format 'start-end'.")
-            page_nums = input().replace(" ", "")
+        self.page_label = ttk.Label(self, text="Pages:")
+        self.page_label.grid(row=0, column=3, sticky=(W, E))
 
-            if len(page_nums.split("-")) == 2:
-                pdfs.append(pdf_location)
-                pages.append(page_nums)
-            else: 
-                print("Looks like you entered something incorrect, please reenter file path and pages.")
+        self.page_entry = ttk.Entry(self, width=TEXT_BOX_WIDTH, textvariable=self.pages)
+        self.page_entry.grid(row=0, column=4, sticky=(E, ))
+
+    def get_info(self):
+        return (self.file_entry.get(), self.page_entry.get())
+    
+
+class PDF_merger(ttk.Frame):
 
 
-        print("Enter the new PDF's path and name.")
-        pdf_new_name = input()
+    def merge(self):
+        filepathArray = []
+        pagesArray = []
 
-        print("Enter the name of the paper's author.")
-        name_of_author = input()
+        new_file = self.file_entry.get()
 
-        print("Merging in progress...")
-        try:
-            if name_of_author != "":
-                merge_pdfs(pdfs, pages, pdf_new_name, name_of_author)
-            else:
-                merge_pdfs(pdfs, pages, pdf_new_name)
-        except:
-            print("Something went wrong while merging the documents, please try again and enter the info slower")
-            continue
+        for info in file_list:
+            if info != None:
+                infoTuple = info.get_info()
+                if (infoTuple[0] != "" or infoTuple[1] != ""):
+                    filepathArray.append(infoTuple[0])
+                    pagesArray.append(infoTuple[1])
+                elif (infoTuple[0] == "" and infoTuple[1] != "") or (infoTuple[0] != "" and infoTuple[1] == ""):
+                    print("Make sure both file and pages are blank or properly filled")
+                    return
+        
+        merge_pdfs(filepathArray, pagesArray, new_file)
+        print("Merge Successful")
 
-        print("Merge Successful!")
 
-    elif userInput == "exit":
-        sys.exit(1)
+    def __init__(self, super_frame):
+        ttk.Frame.__init__(self, super_frame)
 
-# TODO Finish metadata section.
+        self.file_label = ttk.Label(self, text="New File Path:")
+        self.file_label.grid(row=0, column=1, sticky=(W, ))
 
-    elif userInput == "metadata":
-        while True:
-            print("Please enter the PDF's path. Type exit if necessary.")
-            pdf_location = input()
+        self.filepath = StringVar()
 
-            if pdf_location.lower() == "exit":
-                break
-            else:
-                new_metadata = {}
-                old_metadata = DocumentInformation()
+        self.file_entry = ttk.Entry(self, width=TEXT_BOX_WIDTH, textvariable=self.filepath)
+        self.file_entry.grid(row=0, column=2, sticky=(W, E))
+        
+        self.button = ttk.Button(self, text="Merge!", command=self.merge)
+        self.button.grid(row=0, column=3, sticky=(E, ))
 
-                try:
-                    old_pdf = read_pdf(pdf_location)
-                    old_metadata = old_pdf.getDocumentInfo()
-                    new_pdf = PdfFileWriter().cloneDocumentFromReader(read_pdf(pdf_location))
-                except:
-                    print("Something went wrong opening the file, please reenter the path.")
-                    continue
-            
-                print("Opening file was successful.", end=' ')
-                
+root = Tk()
+root.title("CremFuelled's PDF Merger")
+root.geometry(f"{W_WIDTH}x{W_HEIGHT}")
 
-                while True:
-                    print("What metadata attribute would you like to modify?")
-                    attribute = input().lower()
+main_frame = ttk.Frame(root, padding="3 3 3 3")
+main_frame.grid(row=0, column=0, sticky=(N, S, E, W))
 
-                    print(f"What would you like the value of {attribute} to become?")
-                    value = input()
+file_list = []
+
+temp_label = ttk.Label(main_frame, text="Here will be TABS")
+temp_label.grid(row=0, column=0)
+
+for num_rows in range(1, START_FILES+2):
+    temp = PDF_info(main_frame)
+    temp.grid(column=0, row=num_rows, sticky=(W, E))
+    file_list.append(temp)
+
+merger = PDF_merger(main_frame)
+merger.grid(column=0, row=num_rows, sticky=(W, E, S))
+num_rows += 1
+
+# TODO: Add way to change amount of files
+# TODO: Add way to modify title & author name.
+
+root.mainloop()
