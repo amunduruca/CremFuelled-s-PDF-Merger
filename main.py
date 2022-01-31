@@ -8,14 +8,26 @@ W_HEIGHT = 450
 W_WIDTH = 600
 START_FILES = 5
 
-# TODO: Make sure that we have popups for errors and such (replace print statements)
-# def popup(message):
+# TODO: MAKE CODE MORE STABLE
+
+def popup(message):
+    smol_window = Toplevel()
+    popup_frame = ttk.Frame(smol_window, padding="2 2 2 2")
+    popup_frame.grid(row=0, column=0, sticky=(N, S, E, W))
+
+    popup_message = ttk.Label(popup_frame, text=message)
+    popup_message.grid(row=0, column=0, sticky=(E, W, N))
+
+    ok_button = ttk.Button(popup_frame, text="Ok", command=smol_window.destroy)
+    ok_button.grid(row=1, column=0, sticky=(E, W, S))
+
+    
 
 def read_pdf(path : str) -> PdfFileReader:
     try:
         pdf_file = open(path, "rb")
     except:
-        print(f"{path} is not an existing PDF")
+        popup(f"{path} is not an existing PDF")
         return None
     return PdfFileReader(pdf_file)
 
@@ -46,7 +58,7 @@ def merge_pdfs(pdf_paths : list[str], pages : list[str], pdf_name : str, author_
     try:
         output_file = open(pdf_name, "wb")
     except:
-        print("New File Location is invalid.")
+        popup("New File Location is invalid.")
         return
     
     for i in range(len(pdf_list)):
@@ -58,7 +70,7 @@ def merge_pdfs(pdf_paths : list[str], pages : list[str], pdf_name : str, author_
     new_pdf.addMetadata({"author": author_name, "title": pdf_name.removesuffix(".pdf"), "producer": "PyPDF2", "creator": "CremFuelled's PDF Editor"})
     new_pdf.write(output_file)
     output_file.close()
-    
+
 class PDF_info(ttk.Frame):
     def __init__(self, super_frame):
         ttk.Frame.__init__(self, super_frame)
@@ -84,26 +96,34 @@ class PDF_info(ttk.Frame):
 
 class PDF_merger(ttk.Frame):
 
-
     def merge(self):
         filepathArray = []
         pagesArray = []
 
+        author_name = self.author_entry.get()
         new_file = self.file_entry.get()
 
         for info in file_list:
             if info != None:
                 infoTuple = info.get_info()
-                if (infoTuple[0] != "" or infoTuple[1] != ""):
+                if (infoTuple[0] != "" and infoTuple[1] != ""):
                     filepathArray.append(infoTuple[0])
                     pagesArray.append(infoTuple[1])
                 elif (infoTuple[0] == "" and infoTuple[1] != "") or (infoTuple[0] != "" and infoTuple[1] == ""):
-                    print("Make sure both file and pages are blank or properly filled")
+                    popup("Make sure both file and pages are blank or properly filled")
                     return
-        
-        merge_pdfs(filepathArray, pagesArray, new_file)
-        print("Merge Successful")
+        if author_name != "":
+            merge_pdfs(filepathArray, pagesArray, new_file, author_name)
+        else:
+            merge_pdfs(filepathArray, pagesArray, new_file)
+        popup("Merge Successful")
 
+    # TODO: FIX THIS IS BROKEN
+    def add_files(self, event):
+        for i in range(int(self.num_entry.get()) - len(file_list)):
+            temp_file = PDF_info(main_frame)
+            temp_file.grid(row=num_rows, column=0, sticky=(E, W))
+            file_list.append(temp_file)
 
     def __init__(self, super_frame):
         ttk.Frame.__init__(self, super_frame)
@@ -119,6 +139,24 @@ class PDF_merger(ttk.Frame):
         self.button = ttk.Button(self, text="Merge!", command=self.merge)
         self.button.grid(row=0, column=3, sticky=(E, ))
 
+        self.num_of_files = StringVar()
+        self.num_of_files.set(START_FILES)
+
+        self.num_label = ttk.Label(self, text="Number of files:")
+        self.num_label.grid(row=1, column=3, sticky=(E, W))
+
+        self.num_entry = ttk.Entry(self, width=5, textvariable=self.num_of_files)
+        self.num_entry.grid(row=1, column=4, sticky=(E, ))
+        self.num_entry.bind("<Return>", self.add_files)
+
+        self.author_label = ttk.Label(self, text="Author Name:")
+        self.author_label.grid(row=1, column=1, sticky=(W, ))
+
+        self.author = StringVar()
+
+        self.author_entry = ttk.Entry(self, width=TEXT_BOX_WIDTH, textvariable=self.author)
+        self.author_entry.grid(row=1, column=2, sticky=(E, W))
+
 root = Tk()
 root.title("CremFuelled's PDF Merger")
 root.geometry(f"{W_WIDTH}x{W_HEIGHT}")
@@ -126,18 +164,21 @@ root.geometry(f"{W_WIDTH}x{W_HEIGHT}")
 main_frame = ttk.Frame(root, padding="3 3 3 3")
 main_frame.grid(row=0, column=0, sticky=(N, S, E, W))
 
-file_list = []
-
+# TODO: TABS
 temp_label = ttk.Label(main_frame, text="Here will be TABS")
 temp_label.grid(row=0, column=0)
 
-for num_rows in range(1, START_FILES+2):
+merger = PDF_merger(main_frame)
+merger.grid(column=0, row=1, sticky=(W, E, S))
+
+file_list = []
+
+
+for num_rows in range(2, START_FILES+2):
     temp = PDF_info(main_frame)
     temp.grid(column=0, row=num_rows, sticky=(W, E))
     file_list.append(temp)
 
-merger = PDF_merger(main_frame)
-merger.grid(column=0, row=num_rows, sticky=(W, E, S))
 num_rows += 1
 
 # TODO: Add way to change amount of files
