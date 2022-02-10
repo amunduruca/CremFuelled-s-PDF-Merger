@@ -1,3 +1,5 @@
+import sys
+
 from PyPDF2 import PdfFileReader
 from PyPDF2 import PdfFileWriter
 from tkinter import *
@@ -35,6 +37,18 @@ def extract_metadata(path : str):
     pdf_file = read_pdf(path)
     if pdf_file != None:
         return pdf_file.getDocumentInfo()
+
+def change_metadata(path: str, new_metadata: dict[str: str]):
+    reader = read_pdf(path)
+
+    out_file = open(path, "wb")
+    writer = PdfFileWriter()
+
+    writer.cloneDocumentFromReader(reader)
+    writer.addMetadata(new_metadata)
+    writer.write(out_file)
+    out_file.close()
+
 
 def process_page_range(page_range : str) -> list:
     start_to_end_nums = page_range.replace(" ", "").split("-")
